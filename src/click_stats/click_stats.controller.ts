@@ -1,17 +1,23 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Res, HttpException, HttpStatus } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Res,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { CreateClickStatDto } from './dto/create-click_stat.dto';
 import { ClickStatService } from './click_stats.service';
-import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { Roles } from '../auth/role.decorator';
 import { Response } from 'express';
 
-
 @Controller('click-stats')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// @UseGuards(JwtAuthGuard, RolesGuard)
 export class ClickStatController {
-  constructor(private readonly clickStatService: ClickStatService) { }
+  constructor(private readonly clickStatService: ClickStatService) {}
 
   private readonly trackImg = Buffer.from(
     'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -19,7 +25,7 @@ export class ClickStatController {
   );
   private readonly LinkId = {
     OPEN: -1,
-    GENERAL_CLICK: 0
+    GENERAL_CLICK: 0,
   };
 
   @Post()
@@ -59,7 +65,10 @@ export class ClickStatController {
     } else {
       // Log the error and throw a Not Found exception
       console.error('Redirect', `Unresolved URL: <${res.req.url}>`);
-      throw new HttpException('Oops, we couldn\'t find a link for the URL you clicked', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        "Oops, we couldn't find a link for the URL you clicked",
+        HttpStatus.NOT_FOUND,
+      );
     }
   }
 

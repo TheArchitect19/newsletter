@@ -1,15 +1,12 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { List } from './entities/list.entity';
 import { Organization } from '../organizations/entities/organization.entity';
-import { log } from 'console';
 import { InjectKnex } from 'nestjs-knex';
 import { Knex } from 'knex';
-
-
 
 @Injectable()
 export class ListService {
@@ -18,7 +15,7 @@ export class ListService {
     private listRepository: Repository<List>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
-    @InjectKnex() private readonly knex: Knex
+    @InjectKnex() private readonly knex: Knex,
   ) {}
 
   async create(createListDto: CreateListDto) {
@@ -27,7 +24,9 @@ export class ListService {
     list.customFields = createListDto.customFields;
 
     if (createListDto.organizationId) {
-      const organization = await this.organizationRepository.findOne({ where: { id: createListDto.organizationId } });
+      const organization = await this.organizationRepository.findOne({
+        where: { id: createListDto.organizationId },
+      });
       if (organization) {
         list.organization = organization;
       }
@@ -47,10 +46,13 @@ export class ListService {
     }
 
     if (updateListDto.name) list.name = updateListDto.name;
-    if (updateListDto.customFields) list.customFields = updateListDto.customFields;
+    if (updateListDto.customFields)
+      list.customFields = updateListDto.customFields;
 
     if (updateListDto.organizationId) {
-      const organization = await this.organizationRepository.findOne({ where: { id: updateListDto.organizationId } });
+      const organization = await this.organizationRepository.findOne({
+        where: { id: updateListDto.organizationId },
+      });
       if (organization) {
         list.organization = organization;
       }
@@ -60,11 +62,9 @@ export class ListService {
 
   async getByCidTx(tx: Knex.Transaction, listCid: string) {
     try {
-      console.log(listCid)
-      const list = await tx('lists')
-        .where({ id: listCid })
-        .first();
-      console.log("list",list)
+      console.log(listCid);
+      const list = await tx('lists').where({ id: listCid }).first();
+      console.log('list', list);
       if (!list) {
         throw new Error(`List with CID ${listCid} not found`);
       }
@@ -205,5 +205,4 @@ export class ListService {
 
   //   return groupedFlds;
   // }
-
 }

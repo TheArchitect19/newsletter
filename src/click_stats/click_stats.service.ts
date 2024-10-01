@@ -1,20 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ClickStat } from './entities/click_stat.entity';
 import { CreateClickStatDto } from './dto/create-click_stat.dto';
 import { Campaign } from '../campaigns/entities/campaign.entity';
 import { Link, LinkId } from './entities/link.entity';
 import { InjectKnex, Knex } from 'nestjs-knex';
-import geoip from 'geoip-ultralight'
-import uaParser from 'device'
+// import geoip from 'geoip-ultralight';
+import * as geoip from 'geoip-lite';
+import * as UAParser from 'ua-parser-js';
+// import uaParser from 'device';
+// import UAParser from 'ua-parser-js';
 import { Subscriber } from '../subscribers/entities/subscriber.entity';
 import { ListService } from '../lists/lists.service';
 import { CampaignService } from '../campaigns/campaigns.service';
 import { SubscriberService } from '../subscribers/subscribers.service';
 // import { ContextService } from './context'
 import { List } from '../lists/entities/list.entity';
-
 
 @Injectable()
 export class ClickStatService {
@@ -34,7 +36,6 @@ export class ClickStatService {
     private campaignService: CampaignService,
     private subscriberService: SubscriberService,
     // private contextService: ContextService
-
   ) { }
 
   async create(createClickStatDto: CreateClickStatDto) {
@@ -43,7 +44,9 @@ export class ClickStatService {
     clickStat.clickCount = createClickStatDto.clickCount || 0;
 
     if (createClickStatDto.campaignId) {
-      const campaign = await this.campaignRepository.findOne({ where: { id: createClickStatDto.campaignId } });
+      const campaign = await this.campaignRepository.findOne({
+        where: { id: createClickStatDto.campaignId },
+      });
       if (campaign) {
         clickStat.campaign = campaign;
       } else {
@@ -69,7 +72,6 @@ export class ClickStatService {
     return this.clickStatRepository.save(clickStat);
   }
 
-
   async resolve(linkCid: string): Promise<Link | null> {
     return await this.linkRepository.findOne({ where: { cid: linkCid } });
   }
@@ -84,23 +86,63 @@ export class ClickStatService {
   ) {
     // Use a transaction for atomic operations
     await this.knex.transaction(async (tx) => {
-      console.log("g")
+      console.log('g');
       const list = await this.listService.getByCidTx(tx, listCid);
-      console.log("list",list)
-      const campaign = await this.campaignService.getTrackingSettingsByCidTx(tx, campaignCid);
-      console.log("camp", campaign)
-      const subscription = await this.subscriberService.getByCidTx(tx, list.id, subscriptionCid);
+      console.log('list', list);
+      const campaign = await this.campaignService.getTrackingSettingsByCidTx(
+        tx,
+        campaignCid,
+      );
+      console.log('camp', campaign);
+      const subscription = await this.subscriberService.getByCidTx(
+        tx,
+        list.id,
+        subscriptionCid,
+      );
+      console.log("subs", subscription);
+      // const country = geoip.lookup(remoteIp).country || null;
+      // const country = 'geoip.lookup(remoteIp).country';
+      const geo = geoip.lookup(remoteIp);
 
-      const country = geoip.lookupCountry(remoteIp) || null;
-      const device = uaParser.parse(userAgent, {
-        unknownUserAgentDeviceType: 'desktop',
-        emptyUserAgentDeviceType: 'desktop',
-      });
+
+      const uaParser = new UAParser();
+      // const userAgent = request.headers['user-agent'];  // Get user-agent from headers
+      const uaData = uaParser.setUA(userAgent).getResult(); // Parse user-agent string
+      console.log(uaData);
+      // const device = {
+      //   type: parsedData.device.type || 'desktop', // Default to 'desktop' if device type is unknown or empty
+      //   brand: parsedData.device.vendor || 'unknown', // Default to 'unknown' for brand
+      //   model: parsedData.device.model || 'unknown', // Default to 'unknown' for model
+      // };
+      // const device = uaParser.parse(userAgent, {
+      //   unknownUserAgentDeviceType: 'desktop',
+      //   emptyUserAgentDeviceType: 'desktop',
+      // });
       const now = new Date();
 
       // Helper function to handle inserting and updating clicks
-      const _countLink = async (clickLinkId: number, incrementOnDup: boolean) => {
+      const _countLink = async (clickLinkId: number) => {
         try {
+          // const campaignLinksQry = this.knex('campaign_links')
+          //   .insert({
+          //     campaign: campaign.id,
+          //     list: list.id,
+          //     subscription: subscription.id,
+          //     link: clickLinkId,
+          //     ip: remoteIp,
+          //     device_type: 'device.type',
+          //     country,
+          //   })
+          //   .toSQL();
+          // console.log(campaignLinksQry);
+          // const campaignLinksQryResult = await tx.raw(
+          //   campaignLinksQry.sql +
+          //     (incrementOnDup
+          //       ? ' ON DUPLICATE KEY UPDATE `count`=`count`+1'
+          //       : ''),
+          //   campaignLinksQry.bindings,
+          // );
+
           const campaignLinksQry = this.knex('campaign_links')
             .insert({
               campaign: campaign.id,
@@ -108,24 +150,52 @@ export class ClickStatService {
               subscription: subscription.id,
               link: clickLinkId,
               ip: remoteIp,
-              device_type: device.type,
-              country,
+              device_type: uaData.device,
+              country: geo,
+              count: 1,
             })
+            .onConflict(['campaign']) // Specify the columns for conflict
+            .merge({ count: this.knex.raw('"campaign_links"."count" + 1') })
+            .returning('*')
             .toSQL();
-            console.log(campaignLinksQry);
+
           const campaignLinksQryResult = await tx.raw(
-            campaignLinksQry.sql +
-            (incrementOnDup ? ' ON DUPLICATE KEY UPDATE `count`=`count`+1' : ''),
+            campaignLinksQry.sql,
             campaignLinksQry.bindings,
           );
 
-          if (campaignLinksQryResult[0].affectedRows > 1) {
+          console.log(campaignLinksQryResult);
+
+          // const campaignLinksQry = this.knex('campaign_links')
+          //   .insert({
+          //     campaign: campaign.id,
+          //     list: list.id,
+          //     subscription: subscription.id,
+          //     link: clickLinkId,
+          //     ip: remoteIp,
+          //     device_type: 'device.type',
+          //     country,
+          //   })
+          //   .toSQL();
+
+          // console.log(campaignLinksQry);
+
+          // const campaignLinksQryResult = await tx.raw(
+          //   campaignLinksQry.sql +
+          //     (incrementOnDup
+          //       ? ' ON DUPLICATE KEY UPDATE `count`=`count`+1'
+          //       : ''),
+          //   campaignLinksQry.bindings,
+          // );
+
+          if (campaignLinksQryResult.rows.length > 1) {
             return false;
           }
 
           return true;
         } catch (err) {
           if (err.code === 'ER_DUP_ENTRY') {
+            console.log("dbg")
             return false;
           }
           throw err;
@@ -144,7 +214,7 @@ export class ClickStatService {
       }
 
       if (latestUpdates.latest_click || latestUpdates.latest_open) {
-        await tx(this.subscriberService.getSubscriptionTableName(list.id))
+        await tx(this.subscriberService.getSubscriptionTableName())
           .update(latestUpdates)
           .where('id', subscription.id);
       }
@@ -152,27 +222,23 @@ export class ClickStatService {
       // Update clicks
       if (linkId > LinkId.GENERAL_CLICK && !campaign.click_tracking_disabled) {
         await tx('links').increment('hits').where('id', linkId);
-        if (await _countLink(linkId, true)) {
+        if (await _countLink(linkId)) {
           await tx('links').increment('visits').where('id', linkId);
 
-          if (await _countLink(LinkId.GENERAL_CLICK, false)) {
-            await tx('campaigns').increment('clicks').where('id', campaign.id);
-          }
+          // if (await _countLink(LinkId.GENERAL_CLICK, false)) {
+          //   await tx('campaigns').increment('clicks').where('id', campaign.id);
+          // }
         }
       }
 
       // Update opens
       if (!campaign.open_tracking_disabled) {
-        if (await _countLink(LinkId.OPEN, true)) {
+        if (await _countLink(LinkId.OPEN)) {
           await tx('campaigns').increment('opened').where('id', campaign.id);
         }
       }
     });
   }
-
-  
-
-
 
   // async enforceEntityPermissionTx(tx, context, entityTypeId, entityId, requiredOperations) {
   //   if (!entityId) {
@@ -335,5 +401,3 @@ export class ClickStatService {
   //   return field.column || 'grouped_' + field.id;
   // }
 }
-
-

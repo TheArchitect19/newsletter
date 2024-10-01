@@ -18,10 +18,10 @@ import { SubscribersModule } from '../subscribers/subscribers.module';
     AuthModule,
     ListsModule,
     CampaignsModule,
-    SubscribersModule
+    SubscribersModule,
   ],
   controllers: [ClickStatController],
   providers: [ClickStatService],
-  exports: [ClickStatService]
+  exports: [ClickStatService],
 })
-export class ClickStatsModule { }
+export class ClickStatsModule {}

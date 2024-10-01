@@ -25,16 +25,18 @@ async function bootstrap() {
         const messages = errors.map(
           (error) =>
             `${error.property} has failed constraints: ${Object.values(
-              errors
-            ).join(', ')}`
+              errors,
+            ).join(', ')}`,
         );
         return new BadRequestException(messages);
       },
-    })
+    }),
   );
 
-  const port = 8000
+  const port = 8000;
   await app.listen(port);
-  Logger.log(` Application is running on: http://localhost:${port}/${globalPrefix}`)
+  Logger.log(
+    ` Application is running on: http://localhost:${port}/${globalPrefix}`,
+  );
 }
 bootstrap();

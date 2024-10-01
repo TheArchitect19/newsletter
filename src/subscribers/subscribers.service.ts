@@ -15,8 +15,8 @@ export class SubscriberService {
     private subscriberRepository: Repository<Subscriber>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
-    @InjectKnex() private readonly knex: Knex
-  ) { }
+    @InjectKnex() private readonly knex: Knex,
+  ) {}
 
   async create(createSubscriberDto: CreateSubscriberDto) {
     const subscriber = new Subscriber();
@@ -24,7 +24,9 @@ export class SubscriberService {
     subscriber.customFields = createSubscriberDto.customFields;
 
     if (createSubscriberDto.organizationId) {
-      const organization = await this.organizationRepository.findOne({ where: { id: createSubscriberDto.organizationId } });
+      const organization = await this.organizationRepository.findOne({
+        where: { id: createSubscriberDto.organizationId },
+      });
       if (organization) {
         subscriber.organization = organization;
       }
@@ -37,21 +39,26 @@ export class SubscriberService {
     return this.subscriberRepository.find({
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['organization']
+      relations: ['organization'],
     });
   }
 
   async update(id: string, updateSubscriberDto: UpdateSubscriberDto) {
-    const subscriber = await this.subscriberRepository.findOne({ where: { id } });
+    const subscriber = await this.subscriberRepository.findOne({
+      where: { id },
+    });
     if (!subscriber) {
       throw new Error('Subscriber not found');
     }
 
     if (updateSubscriberDto.email) subscriber.email = updateSubscriberDto.email;
-    if (updateSubscriberDto.customFields) subscriber.customFields = updateSubscriberDto.customFields;
+    if (updateSubscriberDto.customFields)
+      subscriber.customFields = updateSubscriberDto.customFields;
 
     if (updateSubscriberDto.organizationId) {
-      const organization = await this.organizationRepository.findOne({ where: { id: updateSubscriberDto.organizationId } });
+      const organization = await this.organizationRepository.findOne({
+        where: { id: updateSubscriberDto.organizationId },
+      });
       if (organization) {
         subscriber.organization = organization;
       }
@@ -74,9 +81,10 @@ export class SubscriberService {
     value: string,
   ) {
     const subscription = await tx('subscribers')
-      .where({ [key]: value, list_id: listId })
+      // .where({ [key]: value, list_id: listId })
+      .where({ [key]: value })
       .first();
-
+    console.log("subscription", subscription);
     if (!subscription) {
       throw new NotFoundException(
         `Subscription with ${key} ${value} not found for list ID ${listId}`,
@@ -84,7 +92,8 @@ export class SubscriberService {
     }
     return subscription;
   }
-  getSubscriptionTableName(listId: any) {
-    return `subscription__${listId}`;
+  getSubscriptionTableName() {
+    // return `subscription__${listId}`;
+    return `subscription`;
   }
 }

@@ -3,10 +3,10 @@ import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class EmailService {
-    constructor(private readonly mailerService: MailerService) { }
+  constructor(private readonly mailerService: MailerService) {}
 
-    async sendEmail(to: string, subject: string, text: string) {
-        const emailTemplate = `
+  async sendEmail(to: string, subject: string, text: string) {
+    const emailTemplate = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -42,6 +42,7 @@ export class EmailService {
         </head>
         <body>
             <div class="container">
+                <img src="http://localhost:8000/api/campaign/list/subscription" width="1" height="1" style="display:none;" />
                 <div class="header">
                     New Info From NewsLetter !!!
                 </div>
@@ -56,11 +57,10 @@ export class EmailService {
         </body>
         </html>
         `;
-        await this.mailerService.sendMail({
-            to,
-            subject,
-            html: emailTemplate,
-        });
-    }
-
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      html: emailTemplate,
+    });
+  }
 }

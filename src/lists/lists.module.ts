@@ -9,10 +9,10 @@ import { Organization } from '../organizations/entities/organization.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([List, Organization]),
-    forwardRef(() => AuthModule)
+    forwardRef(() => AuthModule),
   ],
   controllers: [ListController],
   providers: [ListService],
-  exports: [ListService]
+  exports: [ListService],
 })
-export class ListsModule { }
+export class ListsModule {}

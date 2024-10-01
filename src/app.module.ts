@@ -21,7 +21,6 @@ import { TasksModule } from './tasks/task.module';
 import { KnexModule } from 'nestjs-knex';
 import { ConfigModule } from '@nestjs/config';
 
-
 @Global()
 @Module({
   imports: [
@@ -38,7 +37,7 @@ import { ConfigModule } from '@nestjs/config';
       database: 'NewsLetter',
       entities: [Campaign, ClickStat, List, Organization, Subscriber, User],
       synchronize: true,
-    }),// postgresql 
+    }), // postgresql
     KnexModule.forRoot({
       config: {
         client: 'pg',
@@ -47,23 +46,23 @@ import { ConfigModule } from '@nestjs/config';
           port: 5432,
           user: 'myuser',
           password: 'mypassword',
-          database: 'NewsLetter'
+          database: 'NewsLetter',
         },
         pool: { min: 2, max: 10 },
       },
     }),
-    OrganizationsModule, // org 
+    OrganizationsModule, // org
     UserModule, // cruds for user
     SubscribersModule, // subscribe organisations
     ListsModule,
     CampaignsModule,
     ClickStatsModule,
-    AuthModule, // jwt 
+    AuthModule, // jwt
     EmailModule, // for emails sending and receiving
-    ScheduleModule.forRoot(), 
+    ScheduleModule.forRoot(),
     TasksModule, // cron jobs (calls for every day)
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
